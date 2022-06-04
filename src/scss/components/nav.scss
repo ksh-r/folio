@@ -1,0 +1,60 @@
+@mixin nav__global {
+    position: absolute;
+    z-index: 2;
+}
+@mixin nav__bottom {
+    bottom: 1.788rem;
+}
+@mixin nav__top {
+    top: 1.694rem;
+}
+@mixin nav__left {
+    left: 1.813rem;
+}
+@mixin nav__right {
+    right: 1.928rem;
+}
+
+#nav__keshar {
+    width: 8.2rem;
+    @include nav__global();
+    @include nav__left();
+    @include nav__top();
+}
+
+#nav__projects {
+    width: 15.6rem;
+    @include nav__global();
+    @include nav__top();
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+#nav__about {
+    width: 12.7rem;
+    @include nav__global();
+    @include nav__right();
+    @include nav__top();
+}
+
+#nav__desc__1 {
+    display: none;
+    width: 7.1rem;
+    @include nav__global();
+    @include nav__bottom();
+    @include nav__left();
+}
+
+#nav__desc__2 {
+    width: 6.7rem;
+    @include nav__global();
+    @include nav__bottom();
+    @include nav__left();
+}
+
+#nav__contacts {
+    width: 5.5rem;
+    @include nav__global();
+    @include nav__bottom();
+    @include nav__right();
+}

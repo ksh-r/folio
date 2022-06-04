@@ -1,0 +1,30 @@
+@import './utils/reset.scss';
+@import './utils/fonts.scss';
+
+@import './shared/variables.scss';
+@import './shared/mixins.scss';
+
+@import './components/cursor.scss';
+@import './components/nav.scss';
+@import './components/project_nav.scss';
+@import './components/3d.scss';
+
+@import './pages/home.scss';
+@import './pages/cursor_control.scss';
+@import './pages/about.scss';
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    background: #0e0e0e;
+    font-size: calc(100vw / 1440 * 10);
+    cursor: none;
+}
+
+body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}

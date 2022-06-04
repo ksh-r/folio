@@ -1,0 +1,27 @@
+@mixin project__nav__global {
+    color: $text__orange;
+    font-family: 'inter';
+    font-size: 1.6rem;
+    font-style: italic;
+    font-weight: normal;
+    @include remove__a__styles();
+    @include font__smoothing();
+    letter-spacing: 0.5rem;
+    position: absolute;
+    text-transform: uppercase;
+    top: 50%;
+    z-index: 2;
+}
+
+#project__nav__left {
+    @include project__nav__global();
+    transform: rotate(-90deg) translateX(-50%);
+    transform-origin: top left;
+    left: 4rem;
+}
+#project__nav__right {
+    @include project__nav__global();
+    transform: rotate(90deg) translateX(50%);
+    transform-origin: top right;
+    right: 4rem;
+}
