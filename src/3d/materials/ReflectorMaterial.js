@@ -1,11 +1,11 @@
-import { Color, GLSL3, Matrix3, Matrix4, RawShaderMaterial, Uniform } from 'three';
+import { Color, GLSL3, Matrix3, Matrix4, NoBlending, RawShaderMaterial, Uniform } from 'three';
 
 import vertexShader from '../shaders/ReflectorMaterial.vert.js';
 import fragmentShader from '../shaders/ReflectorMaterial.frag.js';
 
 export class ReflectorMaterial extends RawShaderMaterial {
     constructor({
-        color = new Color(0x7F7F7F),
+        color = new Color(0x7f7f7f),
         map = null,
         fog = null,
         dithering = false
@@ -22,7 +22,8 @@ export class ReflectorMaterial extends RawShaderMaterial {
                 uColor: new Uniform(color instanceof Color ? color : new Color(color))
             },
             vertexShader,
-            fragmentShader
+            fragmentShader,
+            blending: NoBlending
         };
 
         if (map) {

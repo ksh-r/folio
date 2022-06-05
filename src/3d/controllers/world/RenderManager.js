@@ -1,4 +1,4 @@
-import { MathUtils, Mesh, OrthographicCamera, RGBFormat, Scene, Vector2, WebGLRenderTarget } from 'three';
+import { Mesh, OrthographicCamera, Scene, Vector2, WebGLRenderTarget } from 'three';
 
 import { WorldController } from './WorldController.js';
 import { FXAAMaterial } from '../../materials/FXAAMaterial.js';
@@ -7,7 +7,7 @@ import { UnrealBloomBlurMaterial } from '../../materials/UnrealBloomBlurMaterial
 import { BloomCompositeMaterial } from '../../materials/BloomCompositeMaterial.js';
 import { SceneCompositeMaterial } from '../../materials/SceneCompositeMaterial.js';
 
-import { mix } from '../../utils/Utils.js';
+import { floorPowerOfTwo, lerp } from '../../utils/Utils.js';
 
 const BlurDirectionX = new Vector2(1, 0);
 const BlurDirectionY = new Vector2(0, 1);
@@ -39,7 +39,6 @@ export class RenderManager {
 
         // Render targets
         this.renderTargetA = new WebGLRenderTarget(1, 1, {
-            format: RGBFormat,
             depthBuffer: false
         });
 
@@ -64,21 +63,20 @@ export class RenderManager {
 
         // Luminosity high pass material
         this.luminosityMaterial = new LuminosityMaterial();
-        this.luminosityMaterial.uniforms.uLuminosityThreshold.value = this.luminosityThreshold;
-        this.luminosityMaterial.uniforms.uLuminositySmoothing.value = this.luminositySmoothing;
+        this.luminosityMaterial.uniforms.uThreshold.value = this.luminosityThreshold;
+        this.luminosityMaterial.uniforms.uSmoothing.value = this.luminositySmoothing;
 
-        // Gaussian blur materials
+        // Separable Gaussian blur materials
         this.blurMaterials = [];
 
         const kernelSizeArray = [3, 5, 7, 9, 11];
 
         for (let i = 0, l = this.nMips; i < l; i++) {
             this.blurMaterials.push(new UnrealBloomBlurMaterial(kernelSizeArray[i]));
-            this.blurMaterials[i].uniforms.uResolution.value = new Vector2();
         }
 
         // Bloom composite material
-        this.bloomCompositeMaterial = new BloomCompositeMaterial(this.nMips);
+        this.bloomCompositeMaterial = new BloomCompositeMaterial();
         this.bloomCompositeMaterial.uniforms.tBlur1.value = this.renderTargetsVertical[0].texture;
         this.bloomCompositeMaterial.uniforms.tBlur2.value = this.renderTargetsVertical[1].texture;
         this.bloomCompositeMaterial.uniforms.tBlur3.value = this.renderTargetsVertical[2].texture;
@@ -91,11 +89,11 @@ export class RenderManager {
     }
 
     static bloomFactors() {
-        const bloomFactors = [1.0, 0.8, 0.6, 0.4, 0.2];
+        const bloomFactors = [1, 0.8, 0.6, 0.4, 0.2];
 
         for (let i = 0, l = this.nMips; i < l; i++) {
             const factor = bloomFactors[i];
-            bloomFactors[i] = this.bloomStrength * mix(factor, 1.2 - factor, this.bloomRadius);
+            bloomFactors[i] = this.bloomStrength * lerp(factor, 1.2 - factor, this.bloomRadius);
         }
 
         return bloomFactors;
@@ -115,8 +113,8 @@ export class RenderManager {
         this.renderTargetA.setSize(width, height);
         this.renderTargetB.setSize(width, height);
 
-        width = MathUtils.floorPowerOfTwo(width) / 2;
-        height = MathUtils.floorPowerOfTwo(height) / 2;
+        width = floorPowerOfTwo(width) / 2;
+        height = floorPowerOfTwo(height) / 2;
 
         this.renderTargetBright.setSize(width, height);
 

@@ -1,16 +1,16 @@
 import { GLSL3, NoBlending, RawShaderMaterial, Uniform } from 'three';
 
-import vertexShader from '../shaders/FilmGrainPass.vert.js';
-import fragmentShader from '../shaders/FilmGrainPass.frag.js';
+import vertexShader from '../shaders/AfterimagePass.vert.js';
+import fragmentShader from '../shaders/AfterimagePass.frag.js';
 
-export class FilmGrainMaterial extends RawShaderMaterial {
+export class AfterimageMaterial extends RawShaderMaterial {
     constructor() {
         super({
             glslVersion: GLSL3,
             uniforms: {
-                tMap: new Uniform(null),
-                uIntensity: new Uniform(0.5),
-                uTime: new Uniform(0)
+                tOld: new Uniform(null),
+                tNew: new Uniform(null),
+                uDamping: new Uniform(0.96)
             },
             vertexShader,
             fragmentShader,

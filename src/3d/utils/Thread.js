@@ -2,7 +2,6 @@
  * @author pschroen / https://ufo.ai/
  */
 
-import { Assets } from '../loaders/Assets.js';
 import { EventEmitter } from './EventEmitter.js';
 import { Cluster } from './Cluster.js';
 
@@ -43,7 +42,7 @@ export class Thread extends EventEmitter {
         imports.forEach(bundle => {
             const [path, ...names] = bundle;
 
-            array.push(`import { ${names.join(', ')} } from '${absolute(Assets.getPath(path))}';`);
+            array.push(`import { ${names.join(', ')} } from '${absolute(path)}';`);
         });
 
         if (classes.length) {
@@ -74,6 +73,18 @@ export class Thread extends EventEmitter {
         this.addListeners();
     }
 
+    createMethod(name) {
+        this[name] = (message = {}, callback) => {
+            const promise = new Promise(resolve => this.send(name, message, resolve));
+
+            if (callback) {
+                promise.then(callback);
+            }
+
+            return promise;
+        };
+    }
+
     addListeners() {
         this.worker.addEventListener('message', this.onMessage);
     }
@@ -90,18 +101,6 @@ export class Thread extends EventEmitter {
             this.off(data.id);
         }
     };
-
-    createMethod(name) {
-        this[name] = (message = {}, callback) => {
-            const promise = new Promise(resolve => this.send(name, message, resolve));
-
-            if (callback) {
-                promise.then(callback);
-            }
-
-            return promise;
-        };
-    }
 
     send(name, message = {}, callback) {
         message.fn = name;

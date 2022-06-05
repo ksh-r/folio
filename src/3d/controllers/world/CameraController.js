@@ -1,7 +1,7 @@
 import { Vector2, Vector3 } from 'three';
 
 import { Config } from '../../config/Config.js';
-import { Stage } from '../Stage.js';
+import { Stage } from '../../utils/Stage.js';
 
 export class CameraController {
     static init(camera) {
@@ -26,7 +26,7 @@ export class CameraController {
             return;
         }
 
-        Stage.element.addEventListener('pointerdown', this.onPointerDown);
+        window.addEventListener('pointerdown', this.onPointerDown);
         window.addEventListener('pointermove', this.onPointerMove);
         window.addEventListener('pointerup', this.onPointerUp);
     }
@@ -36,7 +36,7 @@ export class CameraController {
             return;
         }
 
-        Stage.element.removeEventListener('pointerdown', this.onPointerDown);
+        window.removeEventListener('pointerdown', this.onPointerDown);
         window.removeEventListener('pointermove', this.onPointerMove);
         window.removeEventListener('pointerup', this.onPointerUp);
     }

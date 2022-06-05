@@ -2,7 +2,9 @@
  * @author pschroen / https://ufo.ai/
  */
 
-import { Box2, BoxGeometry, BufferAttribute, BufferGeometry, MathUtils, Vector3 } from 'three';
+import { Box2, BoxGeometry, BufferAttribute, BufferGeometry, Vector3 } from 'three';
+
+import { degToRad, lerp, radToDeg } from '../Utils.js';
 
 export function getFullscreenTriangle() {
     const geometry = new BufferGeometry();
@@ -50,7 +52,7 @@ export function getScreenSpaceBox(mesh, camera) {
 
 export function getFrustum(camera, offsetZ = 0) {
     const distance = camera.position.z - offsetZ;
-    const fov = MathUtils.degToRad(camera.fov);
+    const fov = degToRad(camera.fov);
     const height = 2 * Math.tan(fov / 2) * distance;
     const width = height * camera.aspect;
 
@@ -59,7 +61,24 @@ export function getFrustum(camera, offsetZ = 0) {
 
 export function getFrustumFromHeight(camera, height, offsetZ = 0) {
     const distance = camera.position.z - offsetZ;
-    const fov = MathUtils.radToDeg(2 * Math.atan(height / (2 * distance)));
+    const fov = radToDeg(2 * Math.atan(height / (2 * distance)));
 
     return fov;
+}
+
+export function lerpCameras(camera1, camera2, alpha) {
+    if (camera1.fov !== camera2.fov || camera1.zoom !== camera2.zoom) {
+        if (camera1.fov !== camera2.fov) {
+            camera1.fov = lerp(camera1.fov, camera2.fov, alpha);
+        }
+
+        if (camera1.zoom !== camera2.zoom) {
+            camera1.zoom = lerp(camera1.zoom, camera2.zoom, alpha);
+        }
+
+        camera1.updateProjectionMatrix();
+    }
+
+    camera1.position.lerp(camera2.position, alpha);
+    camera1.quaternion.slerp(camera2.quaternion, alpha);
 }

@@ -2,13 +2,15 @@
  * @author pschroen / https://ufo.ai/
  */
 
-import { LinearFilter, MathUtils, RGBAFormat, RGBFormat, Texture, sRGBEncoding } from 'three';
+import { LinearFilter, Texture } from 'three';
 
 import { Device } from '../../config/Device.js';
 import { Thread } from '../../utils/Thread.js';
 import { ImageBitmapLoaderThread } from '../ImageBitmapLoaderThread.js';
 import { Assets } from '../Assets.js';
 import { Loader } from '../Loader.js';
+
+import { isPowerOfTwo } from '../../utils/Utils.js';
 
 export class TextureLoader extends Loader {
     constructor(assets, callback) {
@@ -24,8 +26,6 @@ export class TextureLoader extends Loader {
     }
 
     load(path, callback) {
-        path = Assets.getPath(path);
-
         const cached = Assets.get(path);
 
         let texture;
@@ -51,9 +51,9 @@ export class TextureLoader extends Loader {
                 };
 
                 if (Thread.threads) {
-                    promise = ImageBitmapLoaderThread.load(path, Assets.options, params);
+                    promise = ImageBitmapLoaderThread.load(Assets.getPath(path), Assets.options, params);
                 } else {
-                    promise = fetch(path, Assets.options).then(response => {
+                    promise = fetch(Assets.getPath(path), Assets.options).then(response => {
                         return response.blob();
                     }).then(blob => {
                         return createImageBitmap(blob, params);
@@ -69,10 +69,8 @@ export class TextureLoader extends Loader {
                 }
 
                 texture.image = image;
-                texture.format = /jpe?g/.test(path) ? RGBFormat : RGBAFormat;
-                texture.encoding = sRGBEncoding;
 
-                if (!MathUtils.isPowerOfTwo(image.width) || !MathUtils.isPowerOfTwo(image.height)) {
+                if (!isPowerOfTwo(image.width) || !isPowerOfTwo(image.height)) {
                     texture.minFilter = LinearFilter;
                     texture.generateMipmaps = false;
                 }

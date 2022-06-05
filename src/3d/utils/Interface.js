@@ -11,8 +11,8 @@ import { clearTween, delayedCall, tween } from '../tween/Tween.js';
 // https://developer.mozilla.org/en-US/docs/Web/CSS/filter
 const Transforms = ['x', 'y', 'z', 'skewX', 'skewY', 'rotation', 'rotationX', 'rotationY', 'rotationZ', 'scale', 'scaleX', 'scaleY', 'scaleZ'];
 const Filters = ['blur', 'brightness', 'contrast', 'grayscale', 'hue', 'invert', 'saturate', 'sepia'];
-const Numeric = ['opacity', 'zIndex', 'fontWeight', 'strokeWidth', 'strokeDashoffset'];
-const Lacuna1 = ['opacity', 'brightness', 'contrast', 'saturate', 'scale'];
+const Numeric = ['opacity', 'zIndex', 'fontWeight', 'strokeWidth', 'strokeDashoffset', 'stopOpacity'];
+const Lacuna1 = ['opacity', 'brightness', 'contrast', 'saturate', 'scale', 'stopOpacity'];
 
 export class Interface {
     constructor(name, type = 'div', qualifiedName) {
@@ -25,7 +25,7 @@ export class Interface {
 
         if (typeof name === 'object' && name !== null) {
             this.element = name;
-        } else {
+        } else if (type !== null) {
             this.name = name;
             this.type = type;
 
@@ -36,15 +36,13 @@ export class Interface {
             }
 
             if (typeof name === 'string') {
-                if (name.charAt(0) === '.') {
-                    this.element.className = name.substr(1);
+                if (name.startsWith('.')) {
+                    this.element.className = name.slice(1);
                 } else {
                     this.element.id = name;
                 }
             }
         }
-
-        this.element.object = this;
     }
 
     add(child) {
@@ -52,11 +50,9 @@ export class Interface {
             return;
         }
 
-        if (child.destroy) {
-            this.children.push(child);
+        this.children.push(child);
 
-            child.parent = this;
-        }
+        child.parent = this;
 
         if (child.element) {
             this.element.appendChild(child.element);
@@ -385,10 +381,8 @@ export class Interface {
     }
 
     bg(path, backgroundSize = 'contain', backgroundPosition = 'center', backgroundRepeat = 'no-repeat') {
-        path = Assets.getPath(path);
-
         const style = {
-            backgroundImage: `url(${path})`,
+            backgroundImage: `url(${Assets.getPath(path)})`,
             backgroundSize,
             backgroundPosition,
             backgroundRepeat
@@ -414,9 +408,7 @@ export class Interface {
     }
 
     load(path) {
-        path = Assets.getPath(path);
-
-        const promise = fetch(path, Assets.options).then(response => {
+        const promise = fetch(Assets.getPath(path), Assets.options).then(response => {
             return response.text();
         }).then(str => {
             this.html(str);

@@ -1,23 +1,23 @@
-import { Config } from '../config/Config.js';
 import { Events } from '../config/Events.js';
 import { Interface } from '../utils/Interface.js';
+import { Stage } from '../utils/Stage.js';
 
 import { ticker } from '../tween/Ticker.js';
 import { clearTween, tween } from '../tween/Tween.js';
-import { radians } from '../utils/Utils.js';
+import { degToRad } from '../utils/Utils.js';
 
 export class ProgressCanvas extends Interface {
     constructor() {
         super(null, 'canvas');
 
-        const size = 90;
+        const size = 32;
 
         this.width = size;
         this.height = size;
         this.x = size / 2;
         this.y = size / 2;
         this.radius = size * 0.4;
-        this.startAngle = radians(-90);
+        this.startAngle = degToRad(-90);
         this.progress = 0;
         this.needsUpdate = false;
 
@@ -80,24 +80,25 @@ export class ProgressCanvas extends Interface {
         this.context.scale(dpr, dpr);
 
         this.context.lineWidth = 1.5;
-        this.context.strokeStyle = Config.UI_COLOR;
+        this.context.strokeStyle = Stage.rootStyle.getPropertyValue('--ui-color').trim();
+
+        this.update();
     };
 
     update = () => {
         this.context.clearRect(0, 0, this.element.width, this.element.height);
         this.context.beginPath();
-        this.context.arc(this.x, this.y, this.radius, this.startAngle, this.startAngle + radians(360 * this.progress));
+        this.context.arc(this.x, this.y, this.radius, this.startAngle, this.startAngle + degToRad(360 * this.progress));
         this.context.stroke();
     };
 
     animateIn = () => {
         this.addListeners();
         this.resize();
-        this.update();
     };
 
     animateOut = () => {
-        this.tween({ scale: 0.9, opacity: 0 }, 400, 'easeInCubic');
+        this.tween({ scale: 1.1, opacity: 0 }, 400, 'easeInCubic');
     };
 
     destroy = () => {
