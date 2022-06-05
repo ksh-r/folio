@@ -11,7 +11,6 @@ import {
     OrthographicCamera,
     PerspectiveCamera,
     Plane,
-    RGBFormat,
     Scene,
     Uniform,
     Vector3,
@@ -56,7 +55,6 @@ export class Reflector extends Group {
 
         // Render targets
         this.renderTarget = new WebGLRenderTarget(width, height, {
-            format: RGBFormat,
             depthBuffer: false
         });
 
@@ -66,7 +64,7 @@ export class Reflector extends Group {
         this.renderTarget.depthBuffer = true;
 
         // Uniform containing render target textures
-        this.renderTargetUniform = this.blurIterations > 0 ? new Uniform(this.renderTargetRead.texture) : new Uniform(this.renderTarget.texture);
+        this.renderTargetUniform = new Uniform(this.blurIterations > 0 ? this.renderTargetRead.texture : this.renderTarget.texture);
 
         // Reflection blur material
         this.blurMaterial = new ReflectorBlurMaterial();
@@ -77,9 +75,9 @@ export class Reflector extends Group {
         this.screenScene = new Scene();
         this.screenCamera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-        this.screenGeometry = getFullscreenTriangle();
+        this.screenTriangle = getFullscreenTriangle();
 
-        this.screen = new Mesh(this.screenGeometry, this.blurMaterial);
+        this.screen = new Mesh(this.screenTriangle, this.blurMaterial);
         this.screen.frustumCulled = false;
         this.screenScene.add(this.screen);
     }
@@ -155,16 +153,16 @@ export class Reflector extends Group {
 
         this.q.x = (Math.sign(this.clipPlane.x) + projectionMatrix.elements[8]) / projectionMatrix.elements[0];
         this.q.y = (Math.sign(this.clipPlane.y) + projectionMatrix.elements[9]) / projectionMatrix.elements[5];
-        this.q.z = -1.0;
-        this.q.w = (1.0 + projectionMatrix.elements[10]) / projectionMatrix.elements[14];
+        this.q.z = -1;
+        this.q.w = (1 + projectionMatrix.elements[10]) / projectionMatrix.elements[14];
 
         // Calculate the scaled plane vector
-        this.clipPlane.multiplyScalar(2.0 / this.clipPlane.dot(this.q));
+        this.clipPlane.multiplyScalar(2 / this.clipPlane.dot(this.q));
 
         // Replacing the third row of the projection matrix
         projectionMatrix.elements[2] = this.clipPlane.x;
         projectionMatrix.elements[6] = this.clipPlane.y;
-        projectionMatrix.elements[10] = this.clipPlane.z + 1.0 - this.clipBias;
+        projectionMatrix.elements[10] = this.clipPlane.z + 1 - this.clipBias;
         projectionMatrix.elements[14] = this.clipPlane.w;
 
         // Render
@@ -231,7 +229,7 @@ export class Reflector extends Group {
         this.renderTargetRead.dispose();
         this.renderTarget.dispose();
         this.blurMaterial.dispose();
-        this.screenGeometry.dispose();
+        this.screenTriangle.dispose();
 
         for (const prop in this) {
             this[prop] = null;

@@ -1,60 +1,59 @@
 import Cursor from '../cursor';
 
-import { Stage } from '../../3d/controllers/Stage'
 import { Events } from '../../3d/config/Events'
 import { TextureLoader } from '../../3d/loaders/world/TextureLoader'
 import { getFullscreenTriangle } from '../../3d/utils/world/Utils3D'
-import { mix } from '../../3d/utils/Utils'
+import { floorPowerOfTwo, lerp } from '../../3d/utils/Utils';
 import { ticker } from '../../3d/tween/Ticker'
+import { Stage } from '../../3d/utils/Stage'
+import { PanelItem } from '../../3d/utils/panel/PanelItem'
+import { UI } from '../../3d/utils/ui/UI'
 import { Reflector } from '../../3d/utils/world/Reflector'
 import { FXAAMaterial } from '../../3d/materials/FXAAMaterial'
 import { LuminosityMaterial } from '../../3d/materials/LuminosityMaterial'
 import { UnrealBloomBlurMaterial } from '../../3d/materials/UnrealBloomBlurMaterial'
 import { BloomCompositeMaterial } from '../../3d/materials/BloomCompositeMaterial'
-import { ACESFilmicToneMapping, Color, DirectionalLight, Fog, GLSL3, Group, HemisphereLight, MathUtils, Mesh, MeshStandardMaterial, NoBlending, OrthographicCamera, PerspectiveCamera, PlaneGeometry, RGBFormat, RawShaderMaterial, RepeatWrapping, Scene, ShaderMaterial, Uniform, Vector2, Vector3, VideoTexture, WebGLRenderTarget, WebGLRenderer,  } from 'three'
-
-class Config {
-    static BG_COLOR = '#0e0e0e';
-    static UI_COLOR = 'rgba(255, 255, 255, 0.94)';
-}
+import { ACESFilmicToneMapping, Color, DirectionalLight, Fog, GLSL3, Group, HemisphereLight, Mesh, MeshStandardMaterial, NoBlending, OrthographicCamera, PerspectiveCamera, PlaneGeometry, RawShaderMaterial, RepeatWrapping, Scene, Uniform, Vector2, Vector3, WebGLRenderTarget, WebGLRenderer } from 'three'
+import { ShaderMaterial, VideoTexture } from 'three';
+import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader'
 
 import rgbshift from '../../3d/shaders/modules/rgbshift/rgbshift.glsl.js';
 
 const vertexCompositeShader = /* glsl */`
-            in vec3 position;
-            in vec2 uv;
+    in vec3 position;
+    in vec2 uv;
 
-            out vec2 vUv;
+    out vec2 vUv;
 
-            void main() {
-                vUv = uv;
+    void main() {
+        vUv = uv;
 
-                gl_Position = vec4(position, 1.0);
-            }
-        `;
+        gl_Position = vec4(position, 1.0);
+    }
+`;
 
 const fragmentCompositeShader = /* glsl */`
-            precision highp float;
+    precision highp float;
 
-            uniform sampler2D tScene;
-            uniform sampler2D tBloom;
-            uniform float uDistortion;
+    uniform sampler2D tScene;
+    uniform sampler2D tBloom;
+    uniform float uBloomDistortion;
 
-            in vec2 vUv;
+    in vec2 vUv;
 
-            out vec4 FragColor;
+    out vec4 FragColor;
 
-            ${rgbshift}
+    ${rgbshift}
 
-            void main() {
-                FragColor = texture(tScene, vUv);
+    void main() {
+        FragColor = texture(tScene, vUv);
 
-                float angle = length(vUv - 0.5);
-                float amount = 0.0002 + uDistortion;
+        float angle = length(vUv - 0.5);
+        float amount = 0.001 * uBloomDistortion;
 
-                FragColor.rgb += getRGB(tBloom, vUv, angle, amount).rgb;
-            }
-        `;
+        FragColor.rgb += getRGB(tBloom, vUv, angle, amount).rgb;
+    }
+`;
 
 class CompositeMaterial extends RawShaderMaterial {
     constructor() {
@@ -63,7 +62,7 @@ class CompositeMaterial extends RawShaderMaterial {
             uniforms: {
                 tScene: new Uniform(null),
                 tBloom: new Uniform(null),
-                uDistortion: new Uniform(0.00125)
+                uBloomDistortion: new Uniform(1.45)
             },
             vertexShader: vertexCompositeShader,
             fragmentShader: fragmentCompositeShader,
@@ -141,7 +140,7 @@ class Floor extends Group {
     async initMesh() {
         const { loadTexture } = WorldController;
 
-        const geometry = new PlaneGeometry(110, 110);
+        const geometry = new PlaneGeometry(100, 100);
 
         // 2nd set of UV's for aoMap and lightMap
         geometry.attributes.uv2 = geometry.attributes.uv;
@@ -168,6 +167,7 @@ class Floor extends Group {
         ormMap.repeat.set(16, 16);
 
         const material = new MeshStandardMaterial({
+            color: new Color().offsetHSL(0, 0, -0.65),
             roughness: 0.35,
             metalness: 0.18,
             map,
@@ -186,40 +186,40 @@ class Floor extends Group {
 
             shader.vertexShader = shader.vertexShader.replace(
                 'void main() {',
-                        /* glsl */`
-                        uniform mat4 textureMatrix;
-                        out vec4 vCoord;
+                /* glsl */`
+                uniform mat4 textureMatrix;
+                out vec4 vCoord;
 
-                        void main() {
-                        `
+                void main() {
+                `
             );
 
             shader.vertexShader = shader.vertexShader.replace(
                 '#include <project_vertex>',
-                        /* glsl */`
-                        #include <project_vertex>
+                /* glsl */`
+                #include <project_vertex>
 
-                        vCoord = textureMatrix * vec4(transformed, 1.0);
-                        `
+                vCoord = textureMatrix * vec4(transformed, 1.0);
+                `
             );
 
             shader.fragmentShader = shader.fragmentShader.replace(
                 'void main() {',
-                        /* glsl */`
-                        uniform sampler2D reflectMap;
-                        in vec4 vCoord;
+                /* glsl */`
+                uniform sampler2D reflectMap;
+                in vec4 vCoord;
 
-                        void main() {
-                        `
+                void main() {
+                `
             );
 
             shader.fragmentShader = shader.fragmentShader.replace(
                 'vec3 totalEmissiveRadiance = emissive;',
-                        /* glsl */`
-                        vec3 totalEmissiveRadiance = emissive;
+                /* glsl */`
+                vec3 totalEmissiveRadiance = emissive;
 
-                        totalEmissiveRadiance += textureProj(reflectMap, vCoord).rgb * 0.2;
-                        `
+                totalEmissiveRadiance += textureProj(reflectMap, vCoord).rgb * 0.2;
+                `
             );
         };
 
@@ -242,7 +242,7 @@ class Floor extends Group {
      */
 
     resize = (width, height) => {
-        width = MathUtils.floorPowerOfTwo(width) / 2;
+        width = floorPowerOfTwo(width) / 2;
         height = 1024;
 
         this.reflector.setSize(width, height);
@@ -303,6 +303,105 @@ class SceneController {
     static ready = () => this.view.ready();
 }
 
+class PanelController {
+    static init() {
+        this.initViews();
+        this.initPanel();
+    }
+
+    static initViews() {
+        this.ui = new UI({ fps: true });
+        this.ui.animateIn();
+        Stage.add(this.ui);
+    }
+
+    static initPanel() {
+        const { luminosityMaterial, bloomCompositeMaterial, compositeMaterial } = RenderManager;
+
+        const items = [
+            {
+                label: 'FPS'
+            },
+            {
+                type: 'divider'
+            },
+            {
+                type: 'slider',
+                label: 'Thresh',
+                min: 0,
+                max: 1,
+                step: 0.01,
+                value: RenderManager.luminosityThreshold,
+                callback: value => {
+                    luminosityMaterial.uniforms.uThreshold.value = value;
+                }
+            },
+            {
+                type: 'slider',
+                label: 'Smooth',
+                min: 0,
+                max: 1,
+                step: 0.01,
+                value: RenderManager.luminositySmoothing,
+                callback: value => {
+                    luminosityMaterial.uniforms.uSmoothing.value = value;
+                }
+            },
+            {
+                type: 'slider',
+                label: 'Strength',
+                min: 0,
+                max: 1,
+                step: 0.01,
+                value: RenderManager.bloomStrength,
+                callback: value => {
+                    RenderManager.bloomStrength = value;
+                    bloomCompositeMaterial.uniforms.uBloomFactors.value = RenderManager.bloomFactors();
+                }
+            },
+            {
+                type: 'slider',
+                label: 'Radius',
+                min: 0,
+                max: 1,
+                step: 0.01,
+                value: RenderManager.bloomRadius,
+                callback: value => {
+                    RenderManager.bloomRadius = value;
+                    bloomCompositeMaterial.uniforms.uBloomFactors.value = RenderManager.bloomFactors();
+                }
+            },
+            {
+                type: 'slider',
+                label: 'Chroma',
+                min: 0,
+                max: 2,
+                step: 0.01,
+                value: RenderManager.bloomDistortion,
+                callback: value => {
+                    compositeMaterial.uniforms.uBloomDistortion.value = value;
+                }
+            }
+        ];
+
+        items.forEach(data => {
+            this.ui.addPanel(new PanelItem(data));
+        });
+    }
+
+    /**
+     * Public methods
+     */
+
+    static update = () => {
+        if (!this.ui) {
+            return;
+        }
+
+        this.ui.update();
+    };
+}
+
 const BlurDirectionX = new Vector2(1, 0);
 const BlurDirectionY = new Vector2(0, 1);
 
@@ -313,8 +412,10 @@ class RenderManager {
         this.camera = camera;
 
         this.luminosityThreshold = 0.1;
+        this.luminositySmoothing = 1;
         this.bloomStrength = 0.3;
         this.bloomRadius = 0.75;
+        this.bloomDistortion = 1.45;
         this.enabled = true;
 
         this.initRenderer();
@@ -333,7 +434,6 @@ class RenderManager {
 
         // Render targets
         this.renderTargetA = new WebGLRenderTarget(1, 1, {
-            format: RGBFormat,
             depthBuffer: false
         });
 
@@ -358,36 +458,41 @@ class RenderManager {
 
         // Luminosity high pass material
         this.luminosityMaterial = new LuminosityMaterial();
-        this.luminosityMaterial.uniforms.uLuminosityThreshold.value = this.luminosityThreshold;
+        this.luminosityMaterial.uniforms.uThreshold.value = this.luminosityThreshold;
+        this.luminosityMaterial.uniforms.uSmoothing.value = this.luminositySmoothing;
 
-        // Gaussian blur materials
+        // Separable Gaussian blur materials
         this.blurMaterials = [];
 
         const kernelSizeArray = [3, 5, 7, 9, 11];
 
         for (let i = 0, l = this.nMips; i < l; i++) {
             this.blurMaterials.push(new UnrealBloomBlurMaterial(kernelSizeArray[i]));
-            this.blurMaterials[i].uniforms.uResolution.value = new Vector2();
         }
 
         // Bloom composite material
-        const bloomFactors = [1, 0.8, 0.6, 0.4, 0.2];
-
-        for (let i = 0, l = this.nMips; i < l; i++) {
-            const factor = bloomFactors[i];
-            bloomFactors[i] = this.bloomStrength * mix(factor, 1.2 - factor, this.bloomRadius);
-        }
-
-        this.bloomCompositeMaterial = new BloomCompositeMaterial(this.nMips);
+        this.bloomCompositeMaterial = new BloomCompositeMaterial();
         this.bloomCompositeMaterial.uniforms.tBlur1.value = this.renderTargetsVertical[0].texture;
         this.bloomCompositeMaterial.uniforms.tBlur2.value = this.renderTargetsVertical[1].texture;
         this.bloomCompositeMaterial.uniforms.tBlur3.value = this.renderTargetsVertical[2].texture;
         this.bloomCompositeMaterial.uniforms.tBlur4.value = this.renderTargetsVertical[3].texture;
         this.bloomCompositeMaterial.uniforms.tBlur5.value = this.renderTargetsVertical[4].texture;
-        this.bloomCompositeMaterial.uniforms.uBloomFactors.value = bloomFactors;
+        this.bloomCompositeMaterial.uniforms.uBloomFactors.value = this.bloomFactors();
 
         // Composite material
         this.compositeMaterial = new CompositeMaterial();
+        this.compositeMaterial.uniforms.uBloomDistortion.value = this.bloomDistortion;
+    }
+
+    static bloomFactors() {
+        const bloomFactors = [1, 0.8, 0.6, 0.4, 0.2];
+
+        for (let i = 0, l = this.nMips; i < l; i++) {
+            const factor = bloomFactors[i];
+            bloomFactors[i] = this.bloomStrength * lerp(factor, 1.2 - factor, this.bloomRadius);
+        }
+
+        return bloomFactors;
     }
 
     /**
@@ -404,8 +509,8 @@ class RenderManager {
         this.renderTargetA.setSize(width, height);
         this.renderTargetB.setSize(width, height);
 
-        width = MathUtils.floorPowerOfTwo(width) / 2;
-        height = MathUtils.floorPowerOfTwo(height) / 2;
+        width = floorPowerOfTwo(width) / 2;
+        height = floorPowerOfTwo(height) / 2;
 
         this.renderTargetBright.setSize(width, height);
 
@@ -451,34 +556,34 @@ class RenderManager {
         renderer.render(screenScene, screenCamera);
 
         // Extract bright areas
-        // this.luminosityMaterial.uniforms.tMap.value = renderTargetB.texture;
-        // this.screen.material = this.luminosityMaterial;
-        // renderer.setRenderTarget(renderTargetBright);
-        // renderer.render(screenScene, screenCamera);
+        this.luminosityMaterial.uniforms.tMap.value = renderTargetB.texture;
+        this.screen.material = this.luminosityMaterial;
+        renderer.setRenderTarget(renderTargetBright);
+        renderer.render(screenScene, screenCamera);
 
         // Blur all the mips progressively
-        // let inputRenderTarget = renderTargetBright;
+        let inputRenderTarget = renderTargetBright;
 
-        // for (let i = 0, l = this.nMips; i < l; i++) {
-        //     this.screen.material = this.blurMaterials[i];
+        for (let i = 0, l = this.nMips; i < l; i++) {
+            this.screen.material = this.blurMaterials[i];
 
-        //     this.blurMaterials[i].uniforms.tMap.value = inputRenderTarget.texture;
-        //     this.blurMaterials[i].uniforms.uDirection.value = BlurDirectionX;
-        //     renderer.setRenderTarget(renderTargetsHorizontal[i]);
-        //     renderer.render(screenScene, screenCamera);
+            this.blurMaterials[i].uniforms.tMap.value = inputRenderTarget.texture;
+            this.blurMaterials[i].uniforms.uDirection.value = BlurDirectionX;
+            renderer.setRenderTarget(renderTargetsHorizontal[i]);
+            renderer.render(screenScene, screenCamera);
 
-        //     this.blurMaterials[i].uniforms.tMap.value = this.renderTargetsHorizontal[i].texture;
-        //     this.blurMaterials[i].uniforms.uDirection.value = BlurDirectionY;
-        //     renderer.setRenderTarget(renderTargetsVertical[i]);
-        //     renderer.render(screenScene, screenCamera);
+            this.blurMaterials[i].uniforms.tMap.value = this.renderTargetsHorizontal[i].texture;
+            this.blurMaterials[i].uniforms.uDirection.value = BlurDirectionY;
+            renderer.setRenderTarget(renderTargetsVertical[i]);
+            renderer.render(screenScene, screenCamera);
 
-        //     inputRenderTarget = renderTargetsVertical[i];
-        // }
+            inputRenderTarget = renderTargetsVertical[i];
+        }
 
         // Composite all the mips
-        // this.screen.material = this.bloomCompositeMaterial;
-        // renderer.setRenderTarget(renderTargetsHorizontal[0]);
-        // renderer.render(screenScene, screenCamera);
+        this.screen.material = this.bloomCompositeMaterial;
+        renderer.setRenderTarget(renderTargetsHorizontal[0]);
+        renderer.render(screenScene, screenCamera);
 
         // Composite pass (render to screen)
         this.compositeMaterial.uniforms.tScene.value = renderTargetB.texture;
@@ -507,7 +612,7 @@ class CameraController {
     }
 
     static addListeners() {
-        Stage.element.addEventListener('pointerdown', this.onPointerDown);
+        window.addEventListener('pointerdown', this.onPointerDown);
         window.addEventListener('pointermove', this.onPointerMove);
         window.addEventListener('pointerup', this.onPointerUp);
     }
@@ -548,6 +653,8 @@ class CameraController {
         }
 
         this.origin.z = this.camera.position.z;
+
+        this.camera.lookAt(this.lookAt);
     };
 
     static update = () => {
@@ -590,11 +697,11 @@ class WorldController {
 
         // 3D scene
         this.scene = new Scene();
-        this.scene.background = new Color(Config.BG_COLOR);
-        this.scene.fog = new Fog(Config.BG_COLOR, 1, 100);
+        this.scene.background = new Color(0x0e0e0e);
+        this.scene.fog = new Fog(this.scene.background, 1, 100);
         this.camera = new PerspectiveCamera(30);
         this.camera.near = 0.5;
-        this.camera.far = 50;
+        this.camera.far = 40;
         this.camera.position.z = 10;
         this.camera.lookAt(this.scene.position);
 
@@ -652,10 +759,13 @@ class WorldController {
     static getTexture = (path, callback) => this.textureLoader.load(path, callback);
 
     static loadTexture = path => this.textureLoader.loadAsync(path);
+
+    static loadSVG = path => this.svgLoader.loadAsync(path);
 }
 
 class App {
     static async init() {
+        this.initStage();
         this.initWorld();
         this.initViews();
         this.initControllers();
@@ -663,13 +773,16 @@ class App {
         this.addListeners();
         this.onResize();
 
-        await Promise.all([
-            WorldController.textureLoader.ready(),
-            SceneController.ready()
-        ]);
+        await SceneController.ready();
+
+        this.initPanel();
 
         CameraController.animateIn();
         SceneController.animateIn();
+    }
+
+    static initStage() {
+        Stage.init(document.querySelector('#root'));
     }
 
     static initWorld() {
@@ -688,6 +801,10 @@ class App {
         CameraController.init(camera);
         SceneController.init(this.view);
         RenderManager.init(renderer, scene, camera);
+    }
+
+    static initPanel() {
+        PanelController.init();
     }
 
     static addListeners() {
@@ -713,6 +830,7 @@ class App {
         CameraController.update();
         SceneController.update();
         RenderManager.update(time, delta, frame);
+        PanelController.update();
     };
 }
 
@@ -722,6 +840,7 @@ class Home {
         console.log('Home beforeEnter')
         // Once
         if (data.current.namespace === '') {
+            // eslint-disable-next-line no-unused-vars
             let c = new Cursor({
                 inner: document.getElementById('cursor__inner'),
                 outer: document.getElementById('cursor__outer')
@@ -729,14 +848,14 @@ class Home {
         }
     }
     afterEnter = data => {
-        console.log('Home afterEnter')
+        console.log('Home afterEnter', data);
         App.init();
     }
     beforeLeave = data => {
-        console.log('Home beforeLeave')
+        console.log('Home beforeLeave', data);
     }
     afterLeave = data => {
-        console.log('Home afterLeave')
+        console.log('Home afterLeave', data);
     }
 
 }

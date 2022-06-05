@@ -1,4 +1,4 @@
-// import { Config } from '../config/Config.js';
+import { Config } from '../config/Config.js';
 import { Events } from '../config/Events.js';
 import { Assets } from '../loaders/Assets.js';
 import { WebAudio } from '../utils/audio/WebAudio.js';
@@ -8,14 +8,10 @@ import { CameraController } from './world/CameraController.js';
 import { SceneController } from './world/SceneController.js';
 import { InputManager } from './world/InputManager.js';
 import { RenderManager } from './world/RenderManager.js';
-import { Stage } from './Stage.js';
+import { PanelController } from './panel/PanelController.js';
+import { Stage } from '../utils/Stage.js';
 import { SceneView } from '../views/SceneView.js';
 import { LandingView } from '../views/LandingView.js';
-// import { UIL } from '../utils/gui/UIL.js';
-// import { WorldUIL } from '../gui/WorldUIL.js';
-// import { CameraUIL } from '../gui/CameraUIL.js';
-// import { RenderUIL } from '../gui/RenderUIL.js';
-// import { MeshStandardMaterialUIL } from '../gui/MeshStandardMaterialUIL.js';
 
 import { ticker } from '../tween/Ticker.js';
 
@@ -26,21 +22,23 @@ export class App {
         this.initWorld();
         this.initViews();
         this.initControllers();
-        // this.initGUI();
 
         this.addListeners();
         this.onResize();
 
         await this.loader.ready();
 
-        WebAudio.init(Assets.filter(path => /sounds/.test(path)));
-        AudioController.init();
+        this.initAudio();
 
         await Promise.all([
+            SceneController.ready(),
             WorldController.textureLoader.ready(),
-            WorldController.environmentLoader.ready(),
-            SceneController.ready()
+            WorldController.environmentLoader.ready()
         ]);
+
+        if (Config.GUI) {
+            this.initPanel();
+        }
     }
 
     static initWorld() {
@@ -60,25 +58,21 @@ export class App {
         const { renderer, scene, camera } = WorldController;
 
         CameraController.init(camera);
-        InputManager.init(camera);
         SceneController.init(this.view);
+        InputManager.init(camera);
         RenderManager.init(renderer, scene, camera);
     }
 
-    /* static async initGUI() {
-        if (!Config.GUI) {
-            return;
-        }
+    static initAudio() {
+        WebAudio.init(Assets.filter(path => /sounds/.test(path)), { sampleRate: 48000 });
+        AudioController.init();
+    }
 
-        UIL.init();
+    static initPanel() {
+        const { renderer, scene, camera } = WorldController;
 
-        await UIL.ready();
-
-        WorldUIL.init();
-        MeshStandardMaterialUIL.init('Cube', this.view);
-        RenderUIL.init();
-        CameraUIL.init();
-    } */
+        PanelController.init(renderer, scene, camera, this.view);
+    }
 
     static addListeners() {
         Stage.events.on(Events.RESIZE, this.onResize);
@@ -105,14 +99,11 @@ export class App {
 
     static onUpdate = (time, delta, frame) => {
         WorldController.update(time, delta, frame);
-        CameraController.update(time);
+        CameraController.update();
         SceneController.update();
         InputManager.update(time);
         RenderManager.update(time, delta, frame);
-
-        // if (Config.GUI) {
-        //     UIL.update();
-        // }
+        PanelController.update(time);
     };
 
     /**

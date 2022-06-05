@@ -7,15 +7,11 @@ import { Group, Quaternion, Vector3 } from 'three';
 import { WebAudio } from './WebAudio.js';
 import { WebAudioParam } from './WebAudioParam.js';
 
-import { clamp, guid, range } from '../Utils.js';
+import { clamp, guid, mapLinear } from '../Utils.js';
 
 export class Sound3D extends Group {
     constructor(camera, id, buffer) {
         super();
-
-        if (!WebAudio.context) {
-            return;
-        }
 
         if (typeof id !== 'string') {
             buffer = id;
@@ -30,14 +26,14 @@ export class Sound3D extends Group {
             this.cameraWorldPosition = new Vector3();
             this.worldPosition = new Vector3();
 
-            this.audioDistance = 1;
+            this.audioDistance = 0;
             this.audioNearDistance = camera.near;
             this.audioFarDistance = camera.far;
 
             this.output = this.context.createGain();
             this.output.connect(WebAudio.input);
 
-            this.gain = new WebAudioParam(this, 'output', 'gain', 1);
+            this.gain = new WebAudioParam(this, 'output', 'gain', 0);
 
             this.screenSpacePosition = new Vector3();
 
@@ -78,7 +74,7 @@ export class Sound3D extends Group {
     updateMatrixWorld(force) {
         super.updateMatrixWorld(force);
 
-        if (!WebAudio.context) {
+        if (isNaN(this.matrixWorld.elements[0])) {
             return;
         }
 
@@ -86,15 +82,11 @@ export class Sound3D extends Group {
             this.cameraWorldPosition.setFromMatrixPosition(this.camera.matrixWorld);
             this.worldPosition.setFromMatrixPosition(this.matrixWorld);
 
-            this.gain.value = 1 - range(this.cameraWorldPosition.distanceTo(this.worldPosition) - this.audioDistance, this.audioNearDistance, this.audioFarDistance, 0, 1, true);
+            this.gain.value = clamp(mapLinear(this.cameraWorldPosition.distanceTo(this.worldPosition) + this.audioDistance, this.audioNearDistance, this.audioFarDistance, 1, 0), 0, 1);
 
             this.screenSpacePosition.copy(this.worldPosition).project(this.camera);
 
-            if (isNaN(this.screenSpacePosition.x)) {
-                this.stereoPan.value = 0;
-            } else {
-                this.stereoPan.value = clamp(this.screenSpacePosition.x, -1, 1);
-            }
+            this.stereoPan.value = clamp(this.screenSpacePosition.x, -1, 1);
         } else {
             this.matrixWorld.decompose(this.worldPosition, this.worldQuaternion, this.worldScale);
             this.worldOrientation.set(0, 0, 1).applyQuaternion(this.worldQuaternion);

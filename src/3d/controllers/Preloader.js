@@ -5,8 +5,7 @@ import { Assets } from '../loaders/Assets.js';
 import { MultiLoader } from '../loaders/MultiLoader.js';
 import { FontLoader } from '../loaders/FontLoader.js';
 import { AssetLoader } from '../loaders/AssetLoader.js';
-import { WebAudio } from '../utils/audio/WebAudio.js';
-import { Stage } from './Stage.js';
+import { Stage } from '../utils/Stage.js';
 import { PreloaderView } from '../views/PreloaderView.js';
 
 export class Preloader {
@@ -25,10 +24,18 @@ export class Preloader {
 
         Assets.cache = true;
 
+        this.initStage();
         this.initView();
         this.initLoader();
 
         this.addListeners();
+    }
+
+    static initStage() {
+        Stage.init(document.querySelector('#root'));
+
+        Stage.root = document.querySelector(':root');
+        Stage.rootStyle = getComputedStyle(Stage.root);
     }
 
     static initView() {
@@ -50,9 +57,11 @@ export class Preloader {
         this.loader = new MultiLoader();
         this.loader.load(new FontLoader(['Roboto Mono']));
         this.loader.load(new AssetLoader(assets));
-        this.loader.add(1);
+        this.loader.add(2);
 
         const { App } = await import('./App.js');
+        this.loader.trigger(1);
+
         this.app = App;
 
         await this.app.init(this.loader.loaders[1]);
@@ -62,13 +71,11 @@ export class Preloader {
     static addListeners() {
         this.loader.events.on(Events.PROGRESS, this.view.onProgress);
         this.view.events.on(Events.COMPLETE, this.onComplete);
-        Stage.element.addEventListener('pointerdown', this.onPointerDown);
     }
 
     static removeListeners() {
         this.loader.events.off(Events.PROGRESS, this.view.onProgress);
         this.view.events.off(Events.COMPLETE, this.onComplete);
-        Stage.element.removeEventListener('pointerdown', this.onPointerDown);
     }
 
     /**
@@ -84,11 +91,5 @@ export class Preloader {
         this.view = this.view.destroy();
 
         this.app.start();
-    };
-
-    static onPointerDown = () => {
-        Stage.element.removeEventListener('pointerdown', this.onPointerDown);
-
-        WebAudio.resume();
     };
 }
