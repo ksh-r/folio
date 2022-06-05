@@ -722,6 +722,7 @@ class Home {
         console.log('Home beforeEnter')
         // Once
         if (data.current.namespace === '') {
+            // eslint-disable-next-line no-unused-vars
             let c = new Cursor({
                 inner: document.getElementById('cursor__inner'),
                 outer: document.getElementById('cursor__outer')
@@ -729,14 +730,14 @@ class Home {
         }
     }
     afterEnter = data => {
-        console.log('Home afterEnter')
+        console.log('Home afterEnter', data)
         App.init();
     }
     beforeLeave = data => {
-        console.log('Home beforeLeave')
+        console.log('Home beforeLeave', data)
     }
     afterLeave = data => {
-        console.log('Home afterLeave')
+        console.log('Home afterLeave', data)
     }
 
 }
