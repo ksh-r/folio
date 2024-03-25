@@ -16,14 +16,14 @@
   "author": "Keshar W",
   "license": "ISC",
   "devDependencies": {
-    "@parcel/transformer-sass": "^2.0.0-rc.0",
-    "eslint": "^8.17.0",
-    "parcel": "^2.0.0-rc.0",
-    "parcel-reporter-static-files-copy": "^1.3.0"
+    "@parcel/transformer-sass": "^2.12.0",
+    "eslint": "^8.57.0",
+    "parcel": "^2.12.0",
+    "parcel-reporter-static-files-copy": "^1.5.3"
   },
   "dependencies": {
     "@barba/core": "^2.9.7",
-    "gsap": "^3.8.0",
+    "gsap": "^3.12.5",
     "three": "^0.133.1"
   }
 }
